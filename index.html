@@ -1,13 +1,5 @@
 <!DOCTYPE html>
-<html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
-<title>La María Piscícola</title>
-<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Segoe UI",system-ui,sans-serif;background:#f0f4f8}input,select,textarea,button{font-family:inherit}</style>
-</head><body><div id="root">Cargando...</div>
-<script src="react.js"></script><script src="react-dom.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script>firebase.initializeApp({databaseURL:"https://la-maria-piscicola-default-rtdb.firebaseio.com"});</script>
-<script>var useState = React.useState,
+<html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"><title>La María Piscícola</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Segoe UI",system-ui,sans-serif;background:#f0f4f8}input,select,textarea,button{font-family:inherit}</style></head><body><div id="root">Cargando...</div><script src="react.js"></script><script src="react-dom.js"></script><script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script><script>firebase.initializeApp({databaseURL:"https://la-maria-piscicola-default-rtdb.firebaseio.com"});</script><script>var useState = React.useState,
   useEffect = React.useEffect,
   useCallback = React.useCallback,
   useMemo = React.useMemo;
@@ -314,6 +306,37 @@ function curWk(t) {
   });
   return i === -1 ? c.length : i;
 }
+function calWeek(sd) {
+  var s = new Date(sd + "T00:00:00");
+  var dow = s.getDay();
+  var dtm = dow === 0 ? 1 : dow === 1 ? 0 : 8 - dow;
+  var fm = new Date(s);
+  fm.setDate(fm.getDate() + dtm);
+  var today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (today < fm) return 0;
+  return Math.floor((today - fm) / (7 * 86400000)) + 1;
+}
+function weekDates(sd, wk) {
+  var s = new Date(sd + "T00:00:00");
+  var dow = s.getDay();
+  var dtm = dow === 0 ? 1 : dow === 1 ? 0 : 8 - dow;
+  var fm = new Date(s);
+  fm.setDate(fm.getDate() + dtm);
+  var ws = new Date(fm);
+  ws.setDate(ws.getDate() + (wk - 1) * 7);
+  var we = new Date(ws);
+  we.setDate(we.getDate() + 6);
+  var fmt = function (d) {
+    var m = d.getMonth() + 1;
+    var dy = d.getDate();
+    return (dy < 10 ? "0" : "") + dy + "/" + (m < 10 ? "0" : "") + m;
+  };
+  return fmt(ws) + " - " + fmt(we);
+}
+function fN(n) {
+  return n != null ? Number(n).toLocaleString("es-CO") : "—";
+}
 var sI = {
   border: "2px solid #3b82f6",
   borderRadius: 6,
@@ -436,7 +459,7 @@ function Overview({
       background: "#0c2d48",
       color: "white"
     }
-  }, ["Tanque", "Sem", "Vivos", "Peso Esp", "Últ.Bio", "g/Rac", "Alimento", "kg/Día", "BioFin", "Costo"].map(function (h, i) {
+  }, ["Tanque", "Sem", "Vivos", "Peso Esp", "Últ.Bio", "g/Rac", "Rac/Día", "Alimento", "kg/Día", "BioFin", "Costo"].map(function (h, i) {
     return /*#__PURE__*/React.createElement("th", {
       key: i,
       style: {
@@ -449,8 +472,8 @@ function Overview({
     }, h);
   }))), /*#__PURE__*/React.createElement("tbody", null, actv.map(function (t) {
     var c = calc(t),
-      w = curWk(t),
-      x = c[Math.min(w, c.length - 1)],
+      cw = calWeek(t.sd),
+      x = c[Math.min(cw > 0 ? cw - 1 : 0, c.length - 1)],
       last = c[c.length - 1];
     var lastBio = null;
     for (var bi = c.length - 1; bi >= 0; bi--) {
@@ -477,12 +500,12 @@ function Overview({
         color: "#1a4a6e",
         fontSize: 10
       }
-    }, "S" + Math.min(w + 1, c.length)), /*#__PURE__*/React.createElement("td", {
+    }, "S" + cw), /*#__PURE__*/React.createElement("td", {
       style: {
         textAlign: "center",
         fontWeight: 600
       }
-    }, x.al), /*#__PURE__*/React.createElement("td", {
+    }, fN(x.al)), /*#__PURE__*/React.createElement("td", {
       style: {
         textAlign: "center",
         fontWeight: 700
@@ -500,6 +523,11 @@ function Overview({
         color: "#1e40af"
       }
     }, x.pm.toFixed(0)), /*#__PURE__*/React.createElement("td", {
+      style: {
+        textAlign: "center",
+        fontWeight: 600
+      }
+    }, x.fpd), /*#__PURE__*/React.createElement("td", {
       style: {
         textAlign: "center",
         fontSize: 8
@@ -871,6 +899,7 @@ function App() {
     })))));
   }
   function renderFeed() {
+    var cw = calWeek(tank.sd);
     return /*#__PURE__*/React.createElement("div", {
       style: Object.assign({}, sC, {
         overflowX: "auto"
@@ -886,7 +915,7 @@ function App() {
         background: "#0c2d48",
         color: "white"
       }
-    }, ["S", "Alimento", "Wi", "Wf", "Mort", "Vivos", "%", "kg/d", "kg/s", "x/d", "g/c", "Acum", "FCR"].map(function (h, i) {
+    }, ["S", "Fechas", "Alimento", "Wi", "Wf", "Mort", "Vivos", "%", "kg/d", "kg/s", "x/d", "g/c", "Acum", "FCR"].map(function (h, i) {
       return /*#__PURE__*/React.createElement("th", {
         key: i,
         style: {
@@ -896,18 +925,28 @@ function App() {
         }
       }, h);
     }))), /*#__PURE__*/React.createElement("tbody", null, cd.map(function (c, i) {
+      var isNow = c.wk === cw;
       return /*#__PURE__*/React.createElement("tr", {
         key: i,
         style: {
-          borderBottom: "1px solid #e2e8f0"
+          borderBottom: "1px solid #e2e8f0",
+          background: isNow ? "#dbeafe" : ""
         }
       }, /*#__PURE__*/React.createElement("td", {
         style: {
           textAlign: "center",
           padding: 4,
-          fontWeight: 700
+          fontWeight: 700,
+          color: isNow ? "#1e40af" : "inherit"
         }
       }, c.wk), /*#__PURE__*/React.createElement("td", {
+        style: {
+          textAlign: "center",
+          padding: 4,
+          fontSize: 7,
+          color: "#64748b"
+        }
+      }, weekDates(tank.sd, c.wk)), /*#__PURE__*/React.createElement("td", {
         style: {
           padding: 4,
           fontSize: 8
@@ -958,7 +997,7 @@ function App() {
           padding: 4,
           fontWeight: 600
         }
-      }, c.al), /*#__PURE__*/React.createElement("td", {
+      }, fN(c.al)), /*#__PURE__*/React.createElement("td", {
         style: {
           textAlign: "center",
           padding: 4
@@ -1002,6 +1041,7 @@ function App() {
     }))));
   }
   function renderBio() {
+    var cw = calWeek(tank.sd);
     return /*#__PURE__*/React.createElement("div", {
       style: Object.assign({}, sC, {
         overflowX: "auto"
@@ -1017,7 +1057,7 @@ function App() {
         background: "#0c2d48",
         color: "white"
       }
-    }, ["S", "Esp", "Real", "Desv", "Desv%", "Acción"].map(function (h, i) {
+    }, ["S", "Fechas", "Esp", "Real", "Desv", "Desv%", "Acción"].map(function (h, i) {
       return /*#__PURE__*/React.createElement("th", {
         key: i,
         style: {
@@ -1029,18 +1069,28 @@ function App() {
     }))), /*#__PURE__*/React.createElement("tbody", null, cd.map(function (c, i) {
       var dg = c.rw != null ? c.rw - c.wf : null;
       var dp = c.dev;
+      var isNow = c.wk === cw;
       return /*#__PURE__*/React.createElement("tr", {
         key: i,
         style: {
-          borderBottom: "1px solid #e2e8f0"
+          borderBottom: "1px solid #e2e8f0",
+          background: isNow ? "#dbeafe" : ""
         }
       }, /*#__PURE__*/React.createElement("td", {
         style: {
           textAlign: "center",
           padding: 4,
-          fontWeight: 700
+          fontWeight: 700,
+          color: isNow ? "#1e40af" : "inherit"
         }
       }, c.wk), /*#__PURE__*/React.createElement("td", {
+        style: {
+          textAlign: "center",
+          padding: 4,
+          fontSize: 7,
+          color: "#64748b"
+        }
+      }, weekDates(tank.sd, c.wk)), /*#__PURE__*/React.createElement("td", {
         style: {
           textAlign: "center",
           padding: 4
@@ -1091,8 +1141,8 @@ function App() {
     }))));
   }
   function renderCons() {
-    var cw = curWk(tank);
-    var curRow = cd[Math.min(cw, cd.length - 1)];
+    var cw = calWeek(tank.sd);
+    var curRow = cd[Math.min(cw > 0 ? cw - 1 : 0, cd.length - 1)];
     return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
       style: Object.assign({}, sC, {
         marginBottom: 10,
@@ -1105,7 +1155,7 @@ function App() {
         fontSize: 13,
         color: "#0c2d48"
       }
-    }, "📍 Semana: S" + Math.min(cw + 1, cd.length) + " de " + cd.length), curRow && /*#__PURE__*/React.createElement("div", {
+    }, "📍 Semana: S" + cw + " · " + weekDates(tank.sd, Math.max(cw, 1))), curRow && /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 11,
         color: "#475569",
@@ -1755,7 +1805,7 @@ function App() {
   }, "+ Nuevo")), S.tanks.map(function (t) {
     var c = calc(t),
       last = c[c.length - 1],
-      w = curWk(t);
+      w = calWeek(t.sd);
     return /*#__PURE__*/React.createElement("div", {
       key: t.id,
       onClick: function () {
@@ -1809,7 +1859,7 @@ function App() {
         fontSize: 15,
         color: "#8b5cf6"
       }
-    }, "S" + Math.min(w + 1, c.length)), "sem")));
+    }, "S" + w), "sem")));
   })), tab === "tk" && sel && tank && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("button", {
     onClick: function () {
       setSel(null);
@@ -1988,7 +2038,28 @@ function App() {
       color: "#94a3b8",
       marginTop: 4
     }
-  }, tank.fish + " peces · " + tank.ew + "g · " + tank.sd)), desdob && /*#__PURE__*/React.createElement("div", {
+  }, tank.fish + " peces · " + tank.ew + "g · " + tank.sd), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 8,
+      padding: "8px 12px",
+      background: "#eff6ff",
+      borderRadius: 8,
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontWeight: 700,
+      fontSize: 14,
+      color: "#1e40af"
+    }
+  }, "Semana " + calWeek(tank.sd)), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 10,
+      color: "#64748b"
+    }
+  }, "de " + calc(tank).length + " semanas"))), desdob && /*#__PURE__*/React.createElement("div", {
     style: Object.assign({}, sC, {
       marginBottom: 12,
       borderColor: "#8b5cf6"

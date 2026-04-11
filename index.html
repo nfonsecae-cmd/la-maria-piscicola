@@ -1,15 +1,9 @@
 <!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
 <title>La María Piscícola</title>
 <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Segoe UI",system-ui,sans-serif;background:#f0f4f8}input,select,textarea,button{font-family:inherit}</style>
-</head>
-<body>
-<div id="root">Cargando...</div>
-<script src="react.js"></script>
-<script src="react-dom.js"></script>
+</head><body><div id="root">Cargando...</div>
+<script src="react.js"></script><script src="react-dom.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>firebase.initializeApp({databaseURL:"https://la-maria-piscicola-default-rtdb.firebaseio.com"});</script>
@@ -626,6 +620,24 @@ function App() {
   var _dsNB = useState(""),
     dsNB = _dsNB[0],
     setDsNB = _dsNB[1];
+  var _locked = useState(true),
+    locked = _locked[0],
+    setLocked = _locked[1];
+  var _pin = useState(""),
+    pin = _pin[0],
+    setPin = _pin[1];
+  function tryUnlock() {
+    if (pin === "1020") {
+      setLocked(false);
+      setPin("");
+    } else {
+      setPin("");
+    }
+  }
+  function doLock() {
+    setLocked(true);
+    setPin("");
+  }
   useEffect(function () {
     var dbRef = firebase.database().ref("appdata");
     dbRef.on("value", function (snap) {
@@ -1818,6 +1830,46 @@ function App() {
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 8
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontWeight: 700,
+      fontSize: 13,
+      color: "#0c2d48"
+    }
+  }, tank.name), locked ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 4,
+      alignItems: "center"
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "password",
+    value: pin,
+    onChange: function (e) {
+      setPin(e.target.value);
+    },
+    onKeyDown: function (e) {
+      if (e.key === "Enter") tryUnlock();
+    },
+    placeholder: "PIN",
+    style: Object.assign({}, sI, {
+      width: 70,
+      fontSize: 11,
+      padding: "4px 6px"
+    })
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: tryUnlock,
+    style: sB("#64748b")
+  }, "\uD83D\uDD12")) : /*#__PURE__*/React.createElement("button", {
+    onClick: doLock,
+    style: sB("#22c55e")
+  }, "\uD83D\uDD13 Bloquear")), !locked && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
       gap: 8,
       flexWrap: "wrap",
       alignItems: "center",
@@ -1902,7 +1954,7 @@ function App() {
       });
     },
     style: sI
-  }))), /*#__PURE__*/React.createElement("div", {
+  }))), !locked && /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       gap: 6,
@@ -1930,7 +1982,13 @@ function App() {
       setSel(null);
     },
     style: sB("#dc2626")
-  }, "Eliminar"))), desdob && /*#__PURE__*/React.createElement("div", {
+  }, "Eliminar")), locked && /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: "#94a3b8",
+      marginTop: 4
+    }
+  }, tank.fish + " peces · " + tank.ew + "g · " + tank.sd)), desdob && /*#__PURE__*/React.createElement("div", {
     style: Object.assign({}, sC, {
       marginBottom: 12,
       borderColor: "#8b5cf6"
@@ -2310,6 +2368,4 @@ function App() {
     }
   }, "La Mar\xEDa Pisc\xEDcola \xB7 Santiago de Tol\xFA")));
 }
-ReactDOM.render(React.createElement(App), document.getElementById("root"));</script>
-</body>
-</html>
+ReactDOM.render(React.createElement(App), document.getElementById("root"));</script></body></html>

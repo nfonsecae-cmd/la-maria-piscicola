@@ -749,7 +749,14 @@ function App() {
     var f = S.inv.find(function (i) {
       return i.fid === fid;
     });
-    return f && f.prices.length ? f.prices[f.prices.length - 1].price : 0;
+    if (!f || !f.prices.length) return 0;
+    var totalCost = 0,
+      totalQty = 0;
+    f.prices.forEach(function (p) {
+      totalCost += p.price * p.qty;
+      totalQty += p.qty;
+    });
+    return totalQty > 0 ? Math.round(totalCost / totalQty) : 0;
   }
   function iV() {
     return S.inv.reduce(function (a, i) {
@@ -2575,7 +2582,7 @@ function App() {
       background: "#0c2d48",
       color: "white"
     }
-  }, ["Alimento", "Stock", "$/kg", "Valor", "Consumo Proy. 1 Sem", ""].map(function (h, i) {
+  }, ["Alimento", "Stock", "$/kg Prom", "Valor", "Consumo Proy. 1 Sem", ""].map(function (h, i) {
     return /*#__PURE__*/React.createElement("th", {
       key: i,
       style: {
@@ -2671,7 +2678,7 @@ function App() {
       background: "#334155",
       color: "white"
     }
-  }, ["Fecha", "Alimento", "Acción", "Cantidad", "Precio", "Tanque", "Nota"].map(function (h, i) {
+  }, ["Fecha", "Alimento", "Acción", "Cantidad", "Precio", "Tanque", "Nota", ""].map(function (h, i) {
     return /*#__PURE__*/React.createElement("th", {
       key: i,
       style: {
@@ -2688,6 +2695,7 @@ function App() {
       return t.id === e.tid;
     }) || {}).name || "" : "";
     var actColor = e.act === "compra" ? "#22c55e" : e.act === "consumo" ? "#3b82f6" : e.act === "ajuste" ? "#f59e0b" : "#94a3b8";
+    var origIdx = S.log.length - 1 - i;
     return /*#__PURE__*/React.createElement("tr", {
       key: i,
       style: {
@@ -2738,7 +2746,45 @@ function App() {
         color: "#64748b",
         maxWidth: 120
       }
-    }, e.note || "—"));
+    }, e.note || "—"), /*#__PURE__*/React.createElement("td", {
+      style: {
+        textAlign: "center",
+        padding: 2
+      }
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: function () {
+        if (!confirm("¿Eliminar este movimiento?")) return;
+        var entry = S.log[origIdx];
+        var newLog = S.log.slice();
+        newLog.splice(origIdx, 1);
+        var newInv = S.inv.map(function (inv) {
+          if (inv.fid !== entry.fid) return inv;
+          var newStk = inv.stk - entry.qty;
+          var newPrices = inv.prices;
+          if (entry.act === "compra" && entry.price) {
+            newPrices = inv.prices.filter(function (p, pi) {
+              return !(p.date === entry.date && p.price === entry.price && p.qty === Math.abs(entry.qty));
+            });
+          }
+          return Object.assign({}, inv, {
+            stk: newStk,
+            prices: newPrices
+          });
+        });
+        save(Object.assign({}, S, {
+          log: newLog,
+          inv: newInv
+        }));
+      },
+      style: {
+        background: "none",
+        border: "none",
+        color: "#dc2626",
+        cursor: "pointer",
+        fontSize: 13,
+        padding: "2px 4px"
+      }
+    }, "\u2715")));
   })))))), tab === "fd" && /*#__PURE__*/React.createElement("div", {
     style: sC
   }, /*#__PURE__*/React.createElement("div", {

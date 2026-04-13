@@ -745,22 +745,53 @@ function App() {
     });
     return f ? f.stk : 0;
   }
+  /* FIFO: construye cola de lotes, consume desde el más viejo */
+  function fifoLots(fid) {
+    var logs = (S.log || []).filter(function (e) {
+      return e.fid === fid;
+    });
+    var lots = []; /* [{qty,price}] cola FIFO */
+    logs.forEach(function (e) {
+      if (e.act === "compra" && e.price) {
+        lots.push({
+          qty: Math.abs(e.qty),
+          price: e.price
+        });
+      } else if (e.act === "consumo") {
+        var toRemove = Math.abs(e.qty);
+        while (toRemove > 0 && lots.length > 0) {
+          if (lots[0].qty <= toRemove) {
+            toRemove -= lots[0].qty;
+            lots.shift();
+          } else {
+            lots[0].qty -= toRemove;
+            toRemove = 0;
+          }
+        }
+      }
+      /* ajustes no afectan lotes de costo */
+    });
+    return lots;
+  }
   function lP(fid) {
-    var f = S.inv.find(function (i) {
-      return i.fid === fid;
-    });
-    if (!f || !f.prices.length) return 0;
-    var totalCost = 0,
+    var lots = fifoLots(fid);
+    if (!lots.length) return 0;
+    var totalVal = 0,
       totalQty = 0;
-    f.prices.forEach(function (p) {
-      totalCost += p.price * p.qty;
-      totalQty += p.qty;
+    lots.forEach(function (l) {
+      totalVal += l.qty * l.price;
+      totalQty += l.qty;
     });
-    return totalQty > 0 ? Math.round(totalCost / totalQty) : 0;
+    return totalQty > 0 ? Math.round(totalVal / totalQty) : 0;
   }
   function iV() {
     return S.inv.reduce(function (a, i) {
-      return a + i.stk * lP(i.fid);
+      var lots = fifoLots(i.fid);
+      var val = 0;
+      lots.forEach(function (l) {
+        val += l.qty * l.price;
+      });
+      return a + val;
     }, 0);
   }
   function adjS(fid, delta, act, price, tid, note) {
@@ -1403,8 +1434,17 @@ function App() {
     })), /*#__PURE__*/React.createElement("button", {
       onClick: function () {
         if (!fcF || !fcQ) return;
-        var q = parseFloat(fcQ),
-          p = parseFloat(fcP) || lP(fcF) || 0;
+        var q = parseFloat(fcQ);
+        var stk = gSt(fcF);
+        if (stk <= 0) {
+          alert("⚠️ No hay inventario de este alimento (Stock: " + stk.toFixed(1) + " kg). Registre una compra primero.");
+          return;
+        }
+        if (q > stk) {
+          alert("⚠️ Stock insuficiente. Disponible: " + stk.toFixed(1) + " kg, intentando registrar: " + q + " kg.");
+          return;
+        }
+        var p = parseFloat(fcP) || lP(fcF) || 0;
         var newFc = tank.fc.concat([{
           week: fcW,
           fid: fcF,
@@ -2582,7 +2622,7 @@ function App() {
       background: "#0c2d48",
       color: "white"
     }
-  }, ["Alimento", "Stock", "$/kg Prom", "Valor", "Consumo Proy. 1 Sem", ""].map(function (h, i) {
+  }, ["Alimento", "Stock", "$/kg FIFO", "Valor", "Consumo Proy. 1 Sem", ""].map(function (h, i) {
     return /*#__PURE__*/React.createElement("th", {
       key: i,
       style: {

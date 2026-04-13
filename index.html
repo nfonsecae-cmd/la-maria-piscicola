@@ -881,9 +881,10 @@ function App() {
       return t.on;
     }).forEach(function (t) {
       var c = calc(t),
-        w = curWk(t);
-      if (w < c.length) {
-        var x = c[w];
+        cw = calWeek(t.sd);
+      var idx = Math.min(cw > 0 ? cw - 1 : 0, c.length - 1);
+      var x = c[idx];
+      if (x) {
         p[x.feed.id] = (p[x.feed.id] || 0) + x.wkly;
       }
     });

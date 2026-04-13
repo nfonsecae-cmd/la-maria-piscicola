@@ -739,11 +739,13 @@ function App() {
       })
     }));
   }
+  /* Stock calculado 100% desde el log de movimientos */
   function gSt(fid) {
-    var f = S.inv.find(function (i) {
-      return i.fid === fid;
-    });
-    return f ? f.stk : 0;
+    return (S.log || []).filter(function (e) {
+      return e.fid === fid;
+    }).reduce(function (a, e) {
+      return a + e.qty;
+    }, 0);
   }
   /* FIFO: construye cola de lotes, consume desde el más viejo */
   function fifoLots(fid) {
@@ -1414,24 +1416,17 @@ function App() {
         setFcQ(e.target.value);
       },
       style: sI
-    })), /*#__PURE__*/React.createElement("div", {
-      style: {
-        width: 80
-      }
-    }, /*#__PURE__*/React.createElement("label", {
+    })), fcF && /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 9,
-        fontWeight: 600,
-        color: "#64748b"
+        color: "#64748b",
+        padding: "4px 0"
       }
-    }, "$/kg"), /*#__PURE__*/React.createElement("input", {
-      type: "number",
-      value: fcP,
-      onChange: function (e) {
-        setFcP(e.target.value);
-      },
-      style: sI
-    })), /*#__PURE__*/React.createElement("button", {
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontWeight: 600
+      }
+    }, "FIFO: " + fMoney(lP(fcF)) + "/kg")), /*#__PURE__*/React.createElement("button", {
       onClick: function () {
         if (!fcF || !fcQ) return;
         var q = parseFloat(fcQ);
@@ -1444,7 +1439,7 @@ function App() {
           alert("⚠️ Stock insuficiente. Disponible: " + stk.toFixed(1) + " kg, intentando registrar: " + q + " kg.");
           return;
         }
-        var p = parseFloat(fcP) || lP(fcF) || 0;
+        var p = lP(fcF);
         var newFc = tank.fc.concat([{
           week: fcW,
           fid: fcF,
@@ -1462,7 +1457,6 @@ function App() {
           })
         }, iu));
         setFcQ("");
-        setFcP("");
         setFcN("");
       },
       style: sB()

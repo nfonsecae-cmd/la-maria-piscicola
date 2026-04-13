@@ -445,16 +445,12 @@ function TabBtn(props) {
   }, props.label);
 }
 function Overview({
-  S
+  S,
+  invVal
 }) {
   var actv = S.tanks.filter(function (t) {
     return t.on;
   });
-  var invVal = S.inv.reduce(function (a, inv) {
-    var ps = inv.prices;
-    var lp = ps.length ? ps[ps.length - 1].price : 0;
-    return a + inv.stk * lp;
-  }, 0);
   return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       fontWeight: 700,
@@ -1963,7 +1959,8 @@ function App() {
       margin: "0 auto"
     }
   }, tab === "ov" && /*#__PURE__*/React.createElement(Overview, {
-    S: S
+    S: S,
+    invVal: iV()
   }), tab === "tk" && !sel && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",

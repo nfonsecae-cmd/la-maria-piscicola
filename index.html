@@ -848,7 +848,7 @@ function App() {
       return a + val;
     }, 0);
   }
-  function adjS(fid, delta, act, price, tid, note) {
+  function adjS(fid, delta, act, price, tid, note, auto) {
     var inv = S.inv.map(function (i) {
       if (i.fid !== fid) return i;
       return Object.assign({}, i, {
@@ -860,17 +860,19 @@ function App() {
         }]) : i.prices
       });
     });
+    var entry = {
+      date: new Date().toISOString().slice(0, 10),
+      fid: fid,
+      qty: delta,
+      act: act,
+      price: price || null,
+      tid: tid,
+      note: note || ""
+    };
+    if (auto) entry.auto = true;
     return {
       inv: inv,
-      log: S.log.concat([{
-        date: new Date().toISOString().slice(0, 10),
-        fid: fid,
-        qty: delta,
-        act: act,
-        price: price || null,
-        tid: tid,
-        note: note || ""
-      }])
+      log: S.log.concat([entry])
     };
   }
   var proj = useMemo(function () {
@@ -1604,7 +1606,7 @@ function App() {
           if (!confirm("¿Eliminar este registro de consumo?")) return;
           var newFc = tank.fc.slice();
           var removed = newFc.splice(origIdx, 1)[0];
-          var iu = adjS(removed.fid, removed.qty, "ajuste", null, tank.id, "Reverso: eliminado consumo S" + removed.week);
+          var iu = adjS(removed.fid, removed.qty, "ajuste", null, tank.id, "Reverso: eliminado consumo S" + removed.week, true);
           save(Object.assign({}, S, {
             tanks: S.tanks.map(function (t) {
               return t.id === tank.id ? Object.assign({}, t, {
@@ -2841,7 +2843,7 @@ function App() {
       }) || {}).name || "" : "";
       var actColor = e.act === "compra" ? "#22c55e" : e.act === "consumo" ? "#3b82f6" : e.act === "ajuste" ? "#f59e0b" : "#94a3b8";
       var globalIdx = S.log.length - 1 - allLogs.indexOf(e);
-      var canDelete = e.act !== "consumo";
+      var canDelete = e.act !== "consumo" && !e.auto;
       return /*#__PURE__*/React.createElement("tr", {
         key: i,
         style: {

@@ -1968,63 +1968,99 @@ function App() {
             { style: { fontWeight: 700, fontSize: 12, marginBottom: 8, color: "#8b5cf6" } },
             "Desdoble"
           ),
-          React.createElement(
-            "div",
-            { style: { display: "flex", gap: 6, flexWrap: "wrap", alignItems: "flex-end" } },
-            React.createElement(
+          (function () {
+            var avail = (S.pTanks || []).filter(function (p) {
+              return !S.tanks.some(function (t) {
+                return t.on && t.name === p.name;
+              }) || p.name === tank.name;
+            });return React.createElement(
               "div",
-              { style: { width: 120 } },
+              { style: { display: "flex", gap: 6, flexWrap: "wrap", alignItems: "flex-end" } },
               React.createElement(
-                "label",
-                { style: { fontSize: 9 } },
-                "Tanque A"
+                "div",
+                { style: { width: 140 } },
+                React.createElement(
+                  "label",
+                  { style: { fontSize: 9 } },
+                  "Tanque A"
+                ),
+                React.createElement(
+                  "select",
+                  { value: dsNA, onChange: function (e) {
+                      setDsNA(e.target.value);
+                    }, style: Object.assign({}, sI, { textAlign: "left", fontSize: 11 }) },
+                  React.createElement(
+                    "option",
+                    { value: "" },
+                    "Seleccionar..."
+                  ),
+                  avail.map(function (p) {
+                    return p.name !== dsNB ? React.createElement(
+                      "option",
+                      { key: p.id, value: p.name },
+                      p.name + " (" + p.size + ")"
+                    ) : null;
+                  })
+                )
               ),
-              React.createElement("input", { value: dsNA, onChange: function (e) {
-                  setDsNA(e.target.value);
-                }, placeholder: "Nombre A", style: Object.assign({}, sI, { textAlign: "left" }) })
-            ),
-            React.createElement(
-              "div",
-              { style: { width: 70 } },
               React.createElement(
-                "label",
-                { style: { fontSize: 9 } },
-                "Peces A"
+                "div",
+                { style: { width: 70 } },
+                React.createElement(
+                  "label",
+                  { style: { fontSize: 9 } },
+                  "Peces A"
+                ),
+                React.createElement("input", { type: "number", value: dsA, onChange: function (e) {
+                    setDsA(e.target.value);
+                  }, style: sI })
               ),
-              React.createElement("input", { type: "number", value: dsA, onChange: function (e) {
-                  setDsA(e.target.value);
-                }, style: sI })
-            ),
-            React.createElement(
-              "div",
-              { style: { width: 120 } },
               React.createElement(
-                "label",
-                { style: { fontSize: 9 } },
-                "Tanque B"
+                "div",
+                { style: { width: 140 } },
+                React.createElement(
+                  "label",
+                  { style: { fontSize: 9 } },
+                  "Tanque B"
+                ),
+                React.createElement(
+                  "select",
+                  { value: dsNB, onChange: function (e) {
+                      setDsNB(e.target.value);
+                    }, style: Object.assign({}, sI, { textAlign: "left", fontSize: 11 }) },
+                  React.createElement(
+                    "option",
+                    { value: "" },
+                    "Seleccionar..."
+                  ),
+                  avail.map(function (p) {
+                    return p.name !== dsNA ? React.createElement(
+                      "option",
+                      { key: p.id, value: p.name },
+                      p.name + " (" + p.size + ")"
+                    ) : null;
+                  })
+                )
               ),
-              React.createElement("input", { value: dsNB, onChange: function (e) {
-                  setDsNB(e.target.value);
-                }, placeholder: "Nombre B", style: Object.assign({}, sI, { textAlign: "left" }) })
-            ),
-            React.createElement(
-              "div",
-              { style: { width: 70 } },
               React.createElement(
-                "label",
-                { style: { fontSize: 9 } },
-                "Peces B"
+                "div",
+                { style: { width: 70 } },
+                React.createElement(
+                  "label",
+                  { style: { fontSize: 9 } },
+                  "Peces B"
+                ),
+                React.createElement("input", { type: "number", value: dsB, onChange: function (e) {
+                    setDsB(e.target.value);
+                  }, style: sI })
               ),
-              React.createElement("input", { type: "number", value: dsB, onChange: function (e) {
-                  setDsB(e.target.value);
-                }, style: sI })
-            ),
-            React.createElement(
-              "button",
-              { onClick: doDesdoble, style: sB("#8b5cf6") },
-              "Confirmar"
-            )
-          )
+              React.createElement(
+                "button",
+                { onClick: doDesdoble, style: sB("#8b5cf6") },
+                "Confirmar"
+              )
+            );
+          })()
         ),
         React.createElement(
           "div",

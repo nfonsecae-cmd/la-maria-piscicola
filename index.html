@@ -27,7 +27,7 @@ function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
 function mkT(n) {
-  return { id: uid(), name: n || "Tanque", fish: 1000, ew: 0.5, sd: new Date().toISOString().slice(0, 10), on: true, mort: Array(29).fill(0), rw: Array(29).fill(null), rwNotes: Array(29).fill(""), fc: [], wl: [], ac: 0, acNote: "", acLocked: false, oc: [], notes: "", isDesdoble: false, desdobleDate: "", parentName: "", preCost: null, preFish: 0, preMort: 0 };
+  return { id: uid(), name: n || "Tanque", fish: 1000, ew: 0.5, sd: new Date().toISOString().slice(0, 10), on: true, mort: Array(29).fill(0), rw: Array(29).fill(null), rwNotes: Array(29).fill(""), fc: [], wl: [], ac: 0, acNote: "", acLocked: false, oc: [], notes: "", isDesdoble: false, desdobleDate: "", parentName: "", preCost: null, preFish: 0, preMort: 0, wkOffset: 0, cultivo: "" };
 }
 function dS() {
   return { tanks: [mkT("Tanque 1")], feeds: FEEDS.map(function (f) {
@@ -49,7 +49,8 @@ function wksFor(ew) {
 function calc(t) {
   var ws = wksFor(t.ew),
       cf = 0,
-      al = t.fish;
+      al = t.fish,
+      wo = t.wkOffset || 0;
   return ws.map(function (w, i) {
     al = Math.max(0, al - (t.mort[i] || 0));var bS = al * w.wi / 1000,
         bE = al * w.wf / 1000;
@@ -61,9 +62,14 @@ function calc(t) {
         phase = gP((w.wi + w.wf) / 2);
     var rw = t.rw[i],
         dev = rw != null ? (rw - w.wf) / w.wf * 100 : null;
-    var fpd = i + 1 <= 8 ? 5 : 4;
-    return Object.assign({}, w, { al: al, bS: bS, bE: bE, d: d, wk: i + 1, wkly: wkly, cf: cf, fcr: fcr, feed: feed, phase: phase, rw: rw, dev: dev, fpd: fpd, pm: d / fpd * 1000, idx: i });
+    var wk = i + 1 + wo;
+    var fpd = wk <= 8 ? 5 : 4;
+    return Object.assign({}, w, { al: al, bS: bS, bE: bE, d: d, wk: wk, wkly: wkly, cf: cf, fcr: fcr, feed: feed, phase: phase, rw: rw, dev: dev, fpd: fpd, pm: d / fpd * 1000, idx: i });
   });
+}
+/* Find calc row index for a given calendar week */
+function cwIdx(t, cw) {
+  var wo = t.wkOffset || 0;return Math.max(0, Math.min(cw - 1 - wo, calc(t).length - 1));
 }
 function curWk(t) {
   var c = calc(t);var i = c.findIndex(function (w) {
@@ -204,7 +210,8 @@ function Overview(_ref) {
           actv.map(function (t) {
             var c = calc(t),
                 cw = calWeek(t.sd),
-                x = c[Math.min(cw > 0 ? cw - 1 : 0, c.length - 1)],
+                idx = Math.max(0, Math.min(cw - 1 - (t.wkOffset || 0), c.length - 1)),
+                x = c[idx],
                 last = c[c.length - 1];
             var lastBio = null;for (var bi = c.length - 1; bi >= 0; bi--) {
               if (c[bi].rw != null) {
@@ -218,6 +225,11 @@ function Overview(_ref) {
               React.createElement(
                 "td",
                 { style: { padding: 6, fontWeight: 700, fontSize: 10 } },
+                t.cultivo && React.createElement(
+                  "span",
+                  { style: { background: "#8b5cf6", color: "white", padding: "1px 4px", borderRadius: 4, fontSize: 7, fontWeight: 600, marginRight: 4 } },
+                  "C" + t.cultivo
+                ),
                 t.name,
                 desdFalta > 0 && React.createElement(
                   "div",
@@ -409,6 +421,9 @@ function App() {
   var _showFin = useState(false),
       showFin = _showFin[0],
       setShowFin = _showFin[1];
+  var _filtCult = useState(""),
+      filtCult = _filtCult[0],
+      setFiltCult = _filtCult[1];
   var _locked = useState(true),
       locked = _locked[0],
       setLocked = _locked[1];
@@ -546,7 +561,7 @@ function App() {
       return t.on;
     }).forEach(function (t) {
       var c = calc(t),
-          cw = calWeek(t.sd);var idx = Math.min(cw > 0 ? cw - 1 : 0, c.length - 1);var x = c[idx];if (x) {
+          cw = calWeek(t.sd);var idx = cwIdx(t, cw);var x = c[idx];if (x) {
         p[x.feed.id] = (p[x.feed.id] || 0) + x.wkly;
       }
     });return p;
@@ -559,25 +574,29 @@ function App() {
     if (nA + nB > tank.fish || nA <= 0 || nB <= 0) {
       alert("Revise cantidades");return;
     }
-    var cw = curWk(tank);var curW = cd[Math.min(cw, cd.length - 1)];var curWeight = curW ? curW.wf : tank.ew;
+    var cw = calWeek(tank.sd);var curW = cd[cwIdx(tank, cw)];var curWeight = curW ? curW.wf : tank.ew;
     var ratio = nA / (nA + nB);
     var fc = fCost(tank),
         oc = oCost(tank),
-        ac = tank.ac || 0;
+        ac = tank.ac || 0,
+        pre = preTotal(tank);
     var totalMort = tank.mort.reduce(function (a, m) {
       return a + m;
     }, 0);
     var today = new Date().toISOString().slice(0, 10);
+    var wo = cw > 0 ? cw - 1 : 0;
     var tA = mkT(dsNA || tank.name + " A");
-    tA.fish = nA;tA.ew = curWeight;tA.sd = tank.sd;
+    tA.fish = nA;tA.ew = curWeight;tA.sd = tank.sd;tA.wkOffset = wo;
     tA.isDesdoble = true;tA.desdobleDate = today;tA.parentName = tank.name;
-    tA.preCost = { ac: Math.round(ac * ratio), fc: Math.round(fc * ratio), oc: Math.round(oc * ratio) };
+    tA.cultivo = tank.cultivo || "";
+    tA.preCost = { ac: Math.round((ac + pre) * ratio), fc: Math.round(fc * ratio), oc: Math.round(oc * ratio) };
     tA.preFish = tank.fish;tA.preMort = totalMort;
     tA.ac = 0;tA.notes = "Desdoble de " + tank.name + " (" + today + ")";
     var tB = mkT(dsNB || tank.name + " B");
-    tB.fish = nB;tB.ew = curWeight;tB.sd = tank.sd;
+    tB.fish = nB;tB.ew = curWeight;tB.sd = tank.sd;tB.wkOffset = wo;
     tB.isDesdoble = true;tB.desdobleDate = today;tB.parentName = tank.name;
-    tB.preCost = { ac: Math.round(ac * (1 - ratio)), fc: Math.round(fc * (1 - ratio)), oc: Math.round(oc * (1 - ratio)) };
+    tB.cultivo = tank.cultivo || "";
+    tB.preCost = { ac: Math.round((ac + pre) * (1 - ratio)), fc: Math.round(fc * (1 - ratio)), oc: Math.round(oc * (1 - ratio)) };
     tB.preFish = tank.fish;tB.preMort = totalMort;
     tB.ac = 0;tB.notes = "Desdoble de " + tank.name + " (" + today + ")";
     var tanks = S.tanks.map(function (t) {
@@ -967,7 +986,7 @@ function App() {
   }
 
   function renderCons() {
-    var cw = calWeek(tank.sd);var curRow = cd[Math.min(cw > 0 ? cw - 1 : 0, cd.length - 1)];
+    var cw = calWeek(tank.sd);var curRow = cd[cwIdx(tank, cw)];
     return React.createElement(
       "div",
       null,
@@ -1546,119 +1565,146 @@ function App() {
       "div",
       { style: { padding: 14, maxWidth: 1100, margin: "0 auto" } },
       tab === "ov" && React.createElement(Overview, { S: S, invVal: iV() }),
-      tab === "tk" && !sel && React.createElement(
-        "div",
-        null,
-        React.createElement(
+      tab === "tk" && !sel && (function () {
+        var cultivos = [];S.tanks.forEach(function (t) {
+          if (t.cultivo && cultivos.indexOf(t.cultivo) === -1) cultivos.push(t.cultivo);
+        });cultivos.sort();
+        var visible = S.tanks.filter(function (t) {
+          if (filtCult && t.cultivo !== filtCult) return false;return t.on || showFin && !t.on;
+        });
+        return React.createElement(
           "div",
-          { style: { display: "flex", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 6 } },
+          null,
           React.createElement(
             "div",
-            { style: { fontWeight: 700, fontSize: 15, color: "#0c2d48" } },
-            "Cultivos"
-          ),
-          React.createElement(
-            "div",
-            { style: { display: "flex", gap: 6, alignItems: "center" } },
-            S.tanks.filter(function (t) {
-              return !t.on;
-            }).length > 0 && React.createElement(
-              "button",
-              { onClick: function () {
-                  setShowFin(!showFin);
-                }, style: Object.assign({}, sB(showFin ? "#64748b" : "#e2e8f0"), { color: showFin ? "white" : "#64748b", fontSize: 9, padding: "4px 10px" }) },
-              showFin ? "Ocultar finalizados (" + S.tanks.filter(function (t) {
-                return !t.on;
-              }).length + ")" : "Mostrar finalizados (" + S.tanks.filter(function (t) {
-                return !t.on;
-              }).length + ")"
-            ),
-            React.createElement(
-              "button",
-              { onClick: exportCSVAll, style: Object.assign({}, sB("#2d6a8a"), { fontSize: 10, padding: "5px 12px" }) },
-              "⬇ CSV Todos"
-            ),
-            React.createElement(
-              "button",
-              { onClick: function () {
-                  var t = mkT("Tanque " + (S.tanks.length + 1));save(Object.assign({}, S, { tanks: S.tanks.concat([t]) }));setSel(t.id);setSub("da");
-                }, style: sB() },
-              "+ Nuevo"
-            )
-          )
-        ),
-        S.tanks.filter(function (t) {
-          return t.on || showFin && !t.on;
-        }).map(function (t) {
-          var c = calc(t),
-              last = c[c.length - 1],
-              w = calWeek(t.sd);
-          return React.createElement(
-            "div",
-            { key: t.id, onClick: function () {
-                setSel(t.id);setSub("da");
-              }, style: Object.assign({}, sC, { cursor: "pointer", borderLeft: "5px solid " + (t.on ? "#22c55e" : "#94a3b8"), display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, opacity: t.on ? 1 : 0.6 }) },
+            { style: { display: "flex", justifyContent: "space-between", marginBottom: 8, flexWrap: "wrap", gap: 6 } },
             React.createElement(
               "div",
-              null,
+              { style: { fontWeight: 700, fontSize: 15, color: "#0c2d48" } },
+              "Cultivos"
+            ),
+            React.createElement(
+              "div",
+              { style: { display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" } },
+              cultivos.length > 0 && React.createElement(
+                "select",
+                { value: filtCult, onChange: function (e) {
+                    setFiltCult(e.target.value);
+                  }, style: Object.assign({}, sI, { width: "auto", fontSize: 10, padding: "4px 8px" }) },
+                React.createElement(
+                  "option",
+                  { value: "" },
+                  "Todos"
+                ),
+                cultivos.map(function (c) {
+                  return React.createElement(
+                    "option",
+                    { key: c, value: c },
+                    "Cultivo " + c
+                  );
+                })
+              ),
+              S.tanks.filter(function (t) {
+                return !t.on;
+              }).length > 0 && React.createElement(
+                "button",
+                { onClick: function () {
+                    setShowFin(!showFin);
+                  }, style: Object.assign({}, sB(showFin ? "#64748b" : "#e2e8f0"), { color: showFin ? "white" : "#64748b", fontSize: 9, padding: "4px 10px" }) },
+                showFin ? "Ocultar fin." : "Mostrar fin. (" + S.tanks.filter(function (t) {
+                  return !t.on;
+                }).length + ")"
+              ),
+              React.createElement(
+                "button",
+                { onClick: exportCSVAll, style: Object.assign({}, sB("#2d6a8a"), { fontSize: 10, padding: "5px 12px" }) },
+                "⬇ CSV"
+              ),
+              React.createElement(
+                "button",
+                { onClick: function () {
+                    var t = mkT("Tanque " + (S.tanks.length + 1));save(Object.assign({}, S, { tanks: S.tanks.concat([t]) }));setSel(t.id);setSub("da");
+                  }, style: sB() },
+                "+ Nuevo"
+              )
+            )
+          ),
+          visible.map(function (t) {
+            var c = calc(t),
+                last = c[c.length - 1],
+                w = calWeek(t.sd);
+            return React.createElement(
+              "div",
+              { key: t.id, onClick: function () {
+                  setSel(t.id);setSub("da");
+                }, style: Object.assign({}, sC, { cursor: "pointer", borderLeft: "5px solid " + (t.on ? "#22c55e" : "#94a3b8"), display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, opacity: t.on ? 1 : 0.6 }) },
               React.createElement(
                 "div",
-                { style: { fontWeight: 700 } },
-                t.name,
-                !t.on && React.createElement(
-                  "span",
-                  { style: { fontSize: 10, color: "#94a3b8" } },
-                  " (Fin)"
+                null,
+                React.createElement(
+                  "div",
+                  { style: { fontWeight: 700 } },
+                  t.cultivo && React.createElement(
+                    "span",
+                    { style: { background: "#8b5cf6", color: "white", padding: "1px 5px", borderRadius: 4, fontSize: 8, fontWeight: 600, marginRight: 5 } },
+                    "C" + t.cultivo
+                  ),
+                  t.name,
+                  !t.on && React.createElement(
+                    "span",
+                    { style: { fontSize: 10, color: "#94a3b8" } },
+                    " (Fin)"
+                  ),
+                  t.isDesdoble && React.createElement(
+                    "span",
+                    { style: { fontSize: 9, color: "#8b5cf6" } },
+                    " ✂️"
+                  )
                 ),
-                t.isDesdoble && React.createElement(
-                  "span",
-                  { style: { fontSize: 9, color: "#8b5cf6" } },
-                  " ✂️"
+                React.createElement(
+                  "div",
+                  { style: { fontSize: 10, color: "#64748b" } },
+                  fN(t.fish) + " · " + t.ew + "g · " + t.sd
                 )
               ),
               React.createElement(
                 "div",
-                { style: { fontSize: 10, color: "#64748b" } },
-                fN(t.fish) + " · " + t.ew + "g · " + t.sd
+                { style: { display: "flex", gap: 12, fontSize: 11, textAlign: "center" } },
+                React.createElement(
+                  "div",
+                  null,
+                  React.createElement(
+                    "div",
+                    { style: { fontWeight: 700, fontSize: 15, color: "#22c55e" } },
+                    fN(last.al)
+                  ),
+                  "vivos"
+                ),
+                React.createElement(
+                  "div",
+                  null,
+                  React.createElement(
+                    "div",
+                    { style: { fontWeight: 700, fontSize: 15, color: "#3b82f6" } },
+                    fN(Math.round(last.bE))
+                  ),
+                  "kg"
+                ),
+                React.createElement(
+                  "div",
+                  null,
+                  React.createElement(
+                    "div",
+                    { style: { fontWeight: 700, fontSize: 15, color: "#8b5cf6" } },
+                    "S" + w
+                  ),
+                  "sem"
+                )
               )
-            ),
-            React.createElement(
-              "div",
-              { style: { display: "flex", gap: 12, fontSize: 11, textAlign: "center" } },
-              React.createElement(
-                "div",
-                null,
-                React.createElement(
-                  "div",
-                  { style: { fontWeight: 700, fontSize: 15, color: "#22c55e" } },
-                  fN(last.al)
-                ),
-                "vivos"
-              ),
-              React.createElement(
-                "div",
-                null,
-                React.createElement(
-                  "div",
-                  { style: { fontWeight: 700, fontSize: 15, color: "#3b82f6" } },
-                  fN(Math.round(last.bE))
-                ),
-                "kg"
-              ),
-              React.createElement(
-                "div",
-                null,
-                React.createElement(
-                  "div",
-                  { style: { fontWeight: 700, fontSize: 15, color: "#8b5cf6" } },
-                  "S" + w
-                ),
-                "sem"
-              )
-            )
-          );
-        })
-      ),
+            );
+          })
+        );
+      })(),
       tab === "tk" && sel && tank && React.createElement(
         "div",
         null,
@@ -1774,16 +1820,32 @@ function App() {
                 { style: Object.assign({}, sI, { background: "#f1f5f9", color: "#64748b", fontSize: 10 }) },
                 tank.sd
               )
+            ),
+            React.createElement(
+              "div",
+              { style: { width: 70 } },
+              React.createElement(
+                "label",
+                { style: { fontSize: 9, fontWeight: 600, color: tank.isDesdoble ? "#8b5cf6" : "#64748b" } },
+                "Cultivo"
+              ),
+              tank.isDesdoble ? React.createElement(
+                "div",
+                { style: Object.assign({}, sI, { background: "#f5f3ff", color: "#8b5cf6", fontSize: 12, fontWeight: 700 }) },
+                tank.cultivo || "—"
+              ) : React.createElement("input", { value: tank.cultivo || "", onChange: function (e) {
+                  var v = e.target.value;if (v && S.tanks.some(function (t) {
+                    return t.id !== tank.id && t.cultivo === v;
+                  })) {
+                    alert("El cultivo #" + v + " ya existe");return;
+                  }upT(tank.id, { cultivo: v });
+                }, placeholder: "#", style: Object.assign({}, sI, { fontSize: 12 }) })
             )
           ),
           !locked && tank.isDesdoble && React.createElement(
             "div",
-            { style: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 8 } },
-            React.createElement(
-              "div",
-              { style: { fontSize: 10, color: "#8b5cf6", fontWeight: 600 } },
-              "✂️ Desdoble de " + tank.parentName + " · " + (tank.desdobleDate || "")
-            )
+            { style: { padding: "6px 10px", background: "#f5f3ff", borderRadius: 8, marginBottom: 8, fontSize: 10, color: "#8b5cf6", fontWeight: 600 } },
+            "✂️ Desdoble de " + tank.parentName + " · " + (tank.desdobleDate || "")
           ),
           !locked && React.createElement(
             "div",
@@ -1815,11 +1877,16 @@ function App() {
           locked && React.createElement(
             "div",
             { style: { fontSize: 10, color: "#94a3b8", marginTop: 4 } },
+            tank.cultivo && React.createElement(
+              "span",
+              { style: { background: "#8b5cf6", color: "white", padding: "1px 4px", borderRadius: 4, fontSize: 8, fontWeight: 600, marginRight: 4 } },
+              "C" + tank.cultivo
+            ),
             fN(tank.fish) + " peces · " + tank.ew + "g · " + tank.sd,
             tank.isDesdoble && React.createElement(
               "span",
               { style: { color: "#8b5cf6" } },
-              " · ✂️ Desdoble " + (tank.desdobleDate || "")
+              " · ✂️ " + (tank.desdobleDate || "")
             )
           ),
           React.createElement(

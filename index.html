@@ -1880,6 +1880,14 @@ function App() {
                 }, placeholder: "#", style: Object.assign({}, sI, { fontSize: 12 }) })
             )
           ),
+          !locked && React.createElement(
+            "div",
+            { style: { padding: "4px 10px", background: "#fffbeb", borderRadius: 6, marginBottom: 8, fontSize: 9, color: "#92400e" } },
+            (function () {
+              var f = gF(tank.ew),
+                  p = gP(tank.ew);return "ℹ️ Peso de siembra " + tank.ew + "g → Inicia en " + f.name + " (" + p + "). Este peso define la posición inicial en la tabla de alimentación.";
+            })()
+          ),
           !locked && tank.isDesdoble && React.createElement(
             "div",
             { style: { padding: "6px 10px", background: "#f5f3ff", borderRadius: 8, marginBottom: 8, fontSize: 10, color: "#8b5cf6", fontWeight: 600 } },

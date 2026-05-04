@@ -27,7 +27,7 @@ function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
 function mkT(n) {
-  return { id: uid(), name: n || "Tanque", fish: 1000, ew: 0.5, sd: new Date().toISOString().slice(0, 10), on: true, mort: Array(29).fill(0), rw: Array(29).fill(null), rwNotes: Array(29).fill(""), fc: [], wl: [], ac: 0, oc: [], notes: "" };
+  return { id: uid(), name: n || "Tanque", fish: 1000, ew: 0.5, sd: new Date().toISOString().slice(0, 10), on: true, mort: Array(29).fill(0), rw: Array(29).fill(null), rwNotes: Array(29).fill(""), fc: [], wl: [], ac: 0, acNote: "", acLocked: false, oc: [], notes: "", isDesdoble: false, desdobleDate: "", parentName: "", preCost: null, preFish: 0, preMort: 0 };
 }
 function dS() {
   return { tanks: [mkT("Tanque 1")], feeds: FEEDS.map(function (f) {
@@ -114,8 +114,11 @@ function oCost(t) {
     return a + x.amt;
   }, 0);
 }
+function preTotal(t) {
+  var pc = t.preCost;return pc ? (pc.ac || 0) + (pc.fc || 0) + (pc.oc || 0) : 0;
+}
 function tCost(t) {
-  return (t.ac || 0) + fCost(t) + oCost(t);
+  return (t.ac || 0) + fCost(t) + oCost(t) + preTotal(t);
 }
 var PESO_FINAL = 450;
 function projBio(t) {
@@ -382,6 +385,12 @@ function App() {
   var _ocA = useState(""),
       ocA = _ocA[0],
       setOcA = _ocA[1];
+  var _acI = useState(""),
+      acI = _acI[0],
+      setAcI = _acI[1];
+  var _acN = useState(""),
+      acN = _acN[0],
+      setAcN = _acN[1];
   var _dsb = useState(false),
       desdob = _dsb[0],
       setDesdob = _dsb[1];
@@ -548,11 +557,28 @@ function App() {
       alert("Revise cantidades");return;
     }
     var cw = curWk(tank);var curW = cd[Math.min(cw, cd.length - 1)];var curWeight = curW ? curW.wf : tank.ew;
-    var ratio = nA / (nA + nB);var cost = tCost(tank);
-    var tA = mkT(dsNA || tank.name + " A");tA.fish = nA;tA.ew = curWeight;tA.ac = Math.round(cost * ratio);tA.notes = "Desdoble de " + tank.name;
-    var tB = mkT(dsNB || tank.name + " B");tB.fish = nB;tB.ew = curWeight;tB.ac = Math.round(cost * (1 - ratio));tB.notes = "Desdoble de " + tank.name;
+    var ratio = nA / (nA + nB);
+    var fc = fCost(tank),
+        oc = oCost(tank),
+        ac = tank.ac || 0;
+    var totalMort = tank.mort.reduce(function (a, m) {
+      return a + m;
+    }, 0);
+    var today = new Date().toISOString().slice(0, 10);
+    var tA = mkT(dsNA || tank.name + " A");
+    tA.fish = nA;tA.ew = curWeight;tA.sd = tank.sd;
+    tA.isDesdoble = true;tA.desdobleDate = today;tA.parentName = tank.name;
+    tA.preCost = { ac: Math.round(ac * ratio), fc: Math.round(fc * ratio), oc: Math.round(oc * ratio) };
+    tA.preFish = tank.fish;tA.preMort = totalMort;
+    tA.ac = 0;tA.notes = "Desdoble de " + tank.name + " (" + today + ")";
+    var tB = mkT(dsNB || tank.name + " B");
+    tB.fish = nB;tB.ew = curWeight;tB.sd = tank.sd;
+    tB.isDesdoble = true;tB.desdobleDate = today;tB.parentName = tank.name;
+    tB.preCost = { ac: Math.round(ac * (1 - ratio)), fc: Math.round(fc * (1 - ratio)), oc: Math.round(oc * (1 - ratio)) };
+    tB.preFish = tank.fish;tB.preMort = totalMort;
+    tB.ac = 0;tB.notes = "Desdoble de " + tank.name + " (" + today + ")";
     var tanks = S.tanks.map(function (t) {
-      return t.id === tank.id ? Object.assign({}, t, { on: false, notes: (t.notes || "") + "\nDesdoble: " + nA + "/" + nB }) : t;
+      return t.id === tank.id ? Object.assign({}, t, { on: false, notes: (t.notes || "") + "\nDesdoble: " + nA + "/" + nB + " (" + today + ")" }) : t;
     });
     save(Object.assign({}, S, { tanks: tanks.concat([tA, tB]) }));
     setDesdob(false);setSel(null);setDsA("");setDsB("");setDsNA("");setDsNB("");
@@ -603,8 +629,17 @@ function App() {
 
   function renderDash() {
     var last = cd[cd.length - 1];var al = last ? last.al : 0;var su = tank.fish > 0 ? al / tank.fish * 100 : 0;
-    var mort = tank.fish > 0 ? (tank.fish - al) / tank.fish * 100 : 0;
+    var postMort = tank.fish > 0 ? tank.fish - al : 0;
+    var mort = tank.fish > 0 ? postMort / tank.fish * 100 : 0;
     var bioFin = projBio(tank);
+    var isDes = tank.isDesdoble && tank.preCost;
+    var preMortCount = 0,
+        preMortPct = 0;
+    if (isDes && tank.preFish > 0 && tank.preMort > 0) {
+      var ratio = tank.fish / (tank.preFish - (tank.preMort || 0));
+      preMortCount = Math.round(tank.preMort * ratio);
+      preMortPct = tank.preFish > 0 ? preMortCount / Math.round(tank.preFish * ratio) * 100 : 0;
+    }
     return React.createElement(
       "div",
       null,
@@ -612,10 +647,61 @@ function App() {
         "div",
         { style: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 8, marginBottom: 14 } },
         KPI("Vivos", fN(al), "Superv. " + su.toFixed(1) + "%", "#22c55e"),
-        KPI("Mortalidad", mort.toFixed(1) + "%", fN(tank.fish - al) + " muertos", "#dc2626"),
+        KPI("Mortalidad", mort.toFixed(1) + "%", fN(postMort) + " muertos", "#dc2626"),
         KPI("Bio Proyectada", fN(Math.round(bioFin)) + "kg", "a " + PESO_FINAL + "g", "#3b82f6"),
         KPI("Alimento", last ? fN(Math.round(last.cf)) + "kg" : "0kg", "FCR " + (last ? last.fcr : 0).toFixed(2), "#8b5cf6"),
         KPI("Costo", fMoney(tCost(tank)), "COP", "#f59e0b")
+      ),
+      isDes && React.createElement(
+        "div",
+        { style: Object.assign({}, sC, { marginBottom: 12, background: "#faf5ff", borderColor: "#8b5cf6" }) },
+        React.createElement(
+          "div",
+          { style: { fontWeight: 700, fontSize: 12, marginBottom: 8, color: "#8b5cf6" } },
+          "Mortalidad — " + tank.parentName
+        ),
+        React.createElement(
+          "div",
+          { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 } },
+          React.createElement(
+            "div",
+            { style: { textAlign: "center", padding: 8, background: "#f1f5f9", borderRadius: 8 } },
+            React.createElement(
+              "div",
+              { style: { fontSize: 9, color: "#64748b", fontWeight: 600 } },
+              "Pre-Desdoble (proporcional)"
+            ),
+            React.createElement(
+              "div",
+              { style: { fontSize: 18, fontWeight: 700, color: "#94a3b8" } },
+              preMortPct.toFixed(1) + "%"
+            ),
+            React.createElement(
+              "div",
+              { style: { fontSize: 10, color: "#94a3b8" } },
+              "~" + fN(preMortCount) + " muertos"
+            )
+          ),
+          React.createElement(
+            "div",
+            { style: { textAlign: "center", padding: 8, background: "#fef2f2", borderRadius: 8 } },
+            React.createElement(
+              "div",
+              { style: { fontSize: 9, color: "#64748b", fontWeight: 600 } },
+              "Post-Desdoble (este tanque)"
+            ),
+            React.createElement(
+              "div",
+              { style: { fontSize: 18, fontWeight: 700, color: "#dc2626" } },
+              mort.toFixed(1) + "%"
+            ),
+            React.createElement(
+              "div",
+              { style: { fontSize: 10, color: "#dc2626" } },
+              fN(postMort) + " muertos"
+            )
+          )
+        )
       ),
       React.createElement(
         "div",
@@ -1070,21 +1156,94 @@ function App() {
   function renderCosts() {
     var fc = fCost(tank),
         oc = oCost(tank),
+        pre = preTotal(tank),
         tot = tCost(tank),
         last = cd[cd.length - 1],
         bio = last ? last.bE : 0,
         cpk = bio > 0 ? tot / bio : 0;
+    var isDes = tank.isDesdoble && tank.preCost;
     return React.createElement(
       "div",
       null,
       React.createElement(
         "div",
-        { style: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 8, marginBottom: 14 } },
+        { style: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(110px,1fr))", gap: 8, marginBottom: 14 } },
+        isDes && KPI("Pre-Desdoble", fMoney(pre), "heredado", "#64748b"),
         KPI("Alevinos", fMoney(tank.ac || 0), "", "#0ea5e9"),
         KPI("Alimento", fMoney(fc), "", "#8b5cf6"),
         KPI("Otros", fMoney(oc), "", "#f59e0b"),
         KPI("TOTAL", fMoney(tot), "COP", "#ef4444"),
         KPI("$/kg", fMoney(cpk), "COP/kg", "#0c2d48")
+      ),
+      isDes && React.createElement(
+        "div",
+        { style: Object.assign({}, sC, { marginBottom: 12, background: "#f8fafc", borderColor: "#94a3b8" }) },
+        React.createElement(
+          "div",
+          { style: { fontWeight: 700, fontSize: 12, marginBottom: 8, color: "#64748b" } },
+          "Costos Pre-Desdoble (de " + tank.parentName + ")"
+        ),
+        React.createElement(
+          "div",
+          { style: { display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 11 } },
+          React.createElement(
+            "span",
+            null,
+            "Alevinos"
+          ),
+          React.createElement(
+            "span",
+            { style: { fontFamily: "monospace", fontWeight: 600 } },
+            fMoney(tank.preCost.ac || 0)
+          )
+        ),
+        React.createElement(
+          "div",
+          { style: { display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 11, borderTop: "1px solid #e2e8f0" } },
+          React.createElement(
+            "span",
+            null,
+            "Alimento"
+          ),
+          React.createElement(
+            "span",
+            { style: { fontFamily: "monospace", fontWeight: 600 } },
+            fMoney(tank.preCost.fc || 0)
+          )
+        ),
+        React.createElement(
+          "div",
+          { style: { display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 11, borderTop: "1px solid #e2e8f0" } },
+          React.createElement(
+            "span",
+            null,
+            "Otros"
+          ),
+          React.createElement(
+            "span",
+            { style: { fontFamily: "monospace", fontWeight: 600 } },
+            fMoney(tank.preCost.oc || 0)
+          )
+        ),
+        React.createElement(
+          "div",
+          { style: { display: "flex", justifyContent: "space-between", padding: "6px 0", fontSize: 12, borderTop: "2px solid #94a3b8", fontWeight: 700 } },
+          React.createElement(
+            "span",
+            null,
+            "Subtotal Pre-Desdoble"
+          ),
+          React.createElement(
+            "span",
+            { style: { fontFamily: "monospace" } },
+            fMoney(pre)
+          )
+        )
+      ),
+      isDes && React.createElement(
+        "div",
+        { style: { fontWeight: 700, fontSize: 12, color: "#0c2d48", marginBottom: 8 } },
+        "Costos Post-Desdoble"
       ),
       React.createElement(
         "div",
@@ -1094,9 +1253,59 @@ function App() {
           { style: { fontWeight: 700, fontSize: 12, marginBottom: 8 } },
           "Costo Alevinos"
         ),
-        React.createElement("input", { type: "number", value: tank.ac || "", placeholder: "COP", onChange: function (e) {
-            upT(tank.id, { ac: parseInt(e.target.value) || 0 });
-          }, style: Object.assign({}, sI, { maxWidth: 200 }) })
+        tank.acLocked || tank.ac > 0 ? React.createElement(
+          "div",
+          null,
+          React.createElement(
+            "div",
+            { style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0" } },
+            React.createElement(
+              "div",
+              null,
+              React.createElement(
+                "span",
+                { style: { fontWeight: 700, fontSize: 16, fontFamily: "monospace", color: "#0ea5e9" } },
+                fMoney(tank.ac || 0)
+              ),
+              tank.acNote && React.createElement(
+                "div",
+                { style: { fontSize: 10, color: "#64748b", marginTop: 2 } },
+                tank.acNote
+              )
+            ),
+            !locked && React.createElement(
+              "button",
+              { onClick: function () {
+                  upT(tank.id, { acLocked: false, ac: 0, acNote: "" });
+                }, style: Object.assign({}, sB("#dc2626"), { fontSize: 9, padding: "4px 8px" }) },
+              "Corregir"
+            )
+          )
+        ) : React.createElement(
+          "div",
+          null,
+          React.createElement(
+            "div",
+            { style: { display: "flex", gap: 6, alignItems: "flex-end", marginBottom: 6 } },
+            React.createElement(
+              "div",
+              { style: { width: 130 } },
+              React.createElement("input", { type: "number", value: acI, onChange: function (e) {
+                  setAcI(e.target.value);
+                }, placeholder: "$COP", style: sI })
+            ),
+            React.createElement(
+              "button",
+              { onClick: function () {
+                  if (!acI) return;upT(tank.id, { ac: parseInt(acI) || 0, acNote: acN || "", acLocked: true });setAcI("");setAcN("");
+                }, style: sB("#0ea5e9") },
+              "✓ Confirmar"
+            )
+          ),
+          React.createElement("input", { value: acN, onChange: function (e) {
+              setAcN(e.target.value);
+            }, placeholder: "Nota (proveedor, factura, etc.)", style: Object.assign({}, sI, { textAlign: "left", fontSize: 11, fontWeight: 400, color: "#475569" }) })
+        )
       ),
       React.createElement(
         "div",
@@ -1518,7 +1727,7 @@ function App() {
                   upT(tank.id, { ew: Math.max(0.1, parseFloat(e.target.value) || 0.5) });
                 }, style: sI })
             ),
-            React.createElement(
+            !tank.isDesdoble ? React.createElement(
               "div",
               { style: { width: 110 } },
               React.createElement(
@@ -1529,6 +1738,28 @@ function App() {
               React.createElement("input", { type: "date", value: tank.sd, onChange: function (e) {
                   upT(tank.id, { sd: e.target.value });
                 }, style: sI })
+            ) : React.createElement(
+              "div",
+              { style: { width: 110 } },
+              React.createElement(
+                "label",
+                { style: { fontSize: 9, fontWeight: 600, color: "#64748b" } },
+                "Siembra"
+              ),
+              React.createElement(
+                "div",
+                { style: Object.assign({}, sI, { background: "#f1f5f9", color: "#64748b", fontSize: 10 }) },
+                tank.sd
+              )
+            )
+          ),
+          !locked && tank.isDesdoble && React.createElement(
+            "div",
+            { style: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 8 } },
+            React.createElement(
+              "div",
+              { style: { fontSize: 10, color: "#8b5cf6", fontWeight: 600 } },
+              "✂️ Desdoble de " + tank.parentName + " · " + (tank.desdobleDate || "")
             )
           ),
           !locked && React.createElement(
@@ -1561,7 +1792,12 @@ function App() {
           locked && React.createElement(
             "div",
             { style: { fontSize: 10, color: "#94a3b8", marginTop: 4 } },
-            fN(tank.fish) + " peces · " + tank.ew + "g · " + tank.sd
+            fN(tank.fish) + " peces · " + tank.ew + "g · " + tank.sd,
+            tank.isDesdoble && React.createElement(
+              "span",
+              { style: { color: "#8b5cf6" } },
+              " · ✂️ Desdoble " + (tank.desdobleDate || "")
+            )
           ),
           React.createElement(
             "div",

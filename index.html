@@ -30,11 +30,11 @@ function mkT(n) {
   return { id: uid(), name: n || "Tanque", fish: 1000, ew: 0.5, sd: new Date().toISOString().slice(0, 10), on: true, mort: Array(29).fill(0), rw: Array(29).fill(null), rwNotes: Array(29).fill(""), fc: [], wl: [], ac: 0, acNote: "", acLocked: false, oc: [], notes: "", isDesdoble: false, desdobleDate: "", parentName: "", preCost: null, preFish: 0, preMort: 0, wkOffset: 0, cultivo: "" };
 }
 function dS() {
-  return { tanks: [mkT("Tanque 1")], feeds: FEEDS.map(function (f) {
+  return { tanks: [], feeds: FEEDS.map(function (f) {
       return Object.assign({}, f);
     }), inv: FEEDS.map(function (f) {
       return { fid: f.id, stk: 0, prices: [] };
-    }), log: [] };
+    }), log: [], pTanks: [{ id: "pt1", name: "Tanque 1", size: "6m" }, { id: "pt2", name: "Tanque 2", size: "6m" }, { id: "pt3", name: "Tanque 3", size: "6m" }, { id: "pt4", name: "Tanque 4", size: "12m" }, { id: "pt5", name: "Tanque 5", size: "12m" }, { id: "pt6", name: "Tanque 6", size: "12m" }] };
 }
 
 function wksFor(ew) {
@@ -424,6 +424,12 @@ function App() {
   var _filtCult = useState(""),
       filtCult = _filtCult[0],
       setFiltCult = _filtCult[1];
+  var _ptName = useState(""),
+      ptName = _ptName[0],
+      setPtName = _ptName[1];
+  var _ptSize = useState(""),
+      ptSize = _ptSize[0],
+      setPtSize = _ptSize[1];
   var _locked = useState(true),
       locked = _locked[0],
       setLocked = _locked[1];
@@ -1559,7 +1565,10 @@ function App() {
         }, active: tab === "iv", label: "Inventario" }),
       React.createElement(TabBtn, { onClick: function () {
           setTab("fd");setSel(null);
-        }, active: tab === "fd", label: "Alimentos" })
+        }, active: tab === "fd", label: "Alimentos" }),
+      React.createElement(TabBtn, { onClick: function () {
+          setTab("pt");setSel(null);
+        }, active: tab === "pt", label: "Tanques" })
     ),
     React.createElement(
       "div",
@@ -1621,11 +1630,26 @@ function App() {
                 "⬇ CSV"
               ),
               React.createElement(
-                "button",
-                { onClick: function () {
-                    var t = mkT("Tanque " + (S.tanks.length + 1));save(Object.assign({}, S, { tanks: S.tanks.concat([t]) }));setSel(t.id);setSub("da");
-                  }, style: sB() },
-                "+ Nuevo"
+                "select",
+                { onChange: function (e) {
+                    if (!e.target.value) return;var pn = e.target.value;var t = mkT(pn);save(Object.assign({}, S, { tanks: S.tanks.concat([t]) }));setSel(t.id);setSub("da");e.target.value = "";
+                  }, style: Object.assign({}, sI, { width: "auto", fontSize: 10, padding: "5px 8px", background: "#1e40af", color: "white", fontWeight: 600 }) },
+                React.createElement(
+                  "option",
+                  { value: "" },
+                  "+ Nuevo Cultivo"
+                ),
+                (S.pTanks || []).filter(function (p) {
+                  return !S.tanks.some(function (t) {
+                    return t.on && t.name === p.name;
+                  });
+                }).map(function (p) {
+                  return React.createElement(
+                    "option",
+                    { key: p.id, value: p.name },
+                    p.name + " (" + p.size + ")"
+                  );
+                })
               )
             )
           ),
@@ -1766,11 +1790,25 @@ function App() {
               React.createElement(
                 "label",
                 { style: { fontSize: 9, fontWeight: 600, color: "#64748b" } },
-                "Nombre"
+                "Tanque"
               ),
-              React.createElement("input", { value: tank.name, onChange: function (e) {
-                  upT(tank.id, { name: e.target.value });
-                }, style: Object.assign({}, sI, { textAlign: "left" }) })
+              tank.isDesdoble ? React.createElement(
+                "div",
+                { style: Object.assign({}, sI, { background: "#f1f5f9", color: "#64748b", textAlign: "left" }) },
+                tank.name
+              ) : React.createElement(
+                "select",
+                { value: tank.name, onChange: function (e) {
+                    upT(tank.id, { name: e.target.value });
+                  }, style: Object.assign({}, sI, { textAlign: "left" }) },
+                (S.pTanks || []).map(function (p) {
+                  return React.createElement(
+                    "option",
+                    { key: p.id, value: p.name },
+                    p.name + " (" + p.size + ")"
+                  );
+                })
+              )
             ),
             React.createElement(
               "div",
@@ -2437,6 +2475,122 @@ function App() {
                   "td",
                   { style: { textAlign: "center", fontSize: 10 } },
                   f.wMin + "g – " + f.wMax + "g"
+                )
+              );
+            })
+          )
+        )
+      ),
+      tab === "pt" && React.createElement(
+        "div",
+        { style: sC },
+        React.createElement(
+          "div",
+          { style: { fontWeight: 700, fontSize: 14, marginBottom: 10, color: "#0c2d48" } },
+          "Tanques Físicos"
+        ),
+        React.createElement(
+          "div",
+          { style: { display: "flex", gap: 6, alignItems: "flex-end", marginBottom: 12, flexWrap: "wrap" } },
+          React.createElement(
+            "div",
+            { style: { flex: 1, minWidth: 120 } },
+            React.createElement(
+              "label",
+              { style: { fontSize: 9, fontWeight: 600, color: "#64748b" } },
+              "Nombre"
+            ),
+            React.createElement("input", { value: ptName, onChange: function (e) {
+                setPtName(e.target.value);
+              }, placeholder: "Tanque 7", style: Object.assign({}, sI, { textAlign: "left" }) })
+          ),
+          React.createElement(
+            "div",
+            { style: { width: 80 } },
+            React.createElement(
+              "label",
+              { style: { fontSize: 9, fontWeight: 600, color: "#64748b" } },
+              "Tamaño"
+            ),
+            React.createElement("input", { value: ptSize, onChange: function (e) {
+                setPtSize(e.target.value);
+              }, placeholder: "12m", style: sI })
+          ),
+          React.createElement(
+            "button",
+            { onClick: function () {
+                if (!ptName || !ptSize) return;if ((S.pTanks || []).some(function (p) {
+                  return p.name === ptName;
+                })) {
+                  alert("Ya existe un tanque con ese nombre");return;
+                }var pt = { id: uid(), name: ptName, size: ptSize };save(Object.assign({}, S, { pTanks: (S.pTanks || []).concat([pt]) }));setPtName("");setPtSize("");
+              }, style: sB() },
+            "+ Agregar"
+          )
+        ),
+        React.createElement(
+          "table",
+          { style: { width: "100%", borderCollapse: "collapse", fontSize: 11 } },
+          React.createElement(
+            "thead",
+            null,
+            React.createElement(
+              "tr",
+              { style: { background: "#0c2d48", color: "white" } },
+              ["Tanque", "Tamaño", "Estado", ""].map(function (h, i) {
+                return React.createElement(
+                  "th",
+                  { key: i, style: { padding: "7px", fontSize: 10, textAlign: "center" } },
+                  h
+                );
+              })
+            )
+          ),
+          React.createElement(
+            "tbody",
+            null,
+            (S.pTanks || []).map(function (p) {
+              var inUse = S.tanks.some(function (t) {
+                return t.on && t.name === p.name;
+              });
+              return React.createElement(
+                "tr",
+                { key: p.id, style: { borderBottom: "1px solid #e2e8f0" } },
+                React.createElement(
+                  "td",
+                  { style: { padding: 7, fontWeight: 600 } },
+                  p.name
+                ),
+                React.createElement(
+                  "td",
+                  { style: { textAlign: "center", fontWeight: 600 } },
+                  p.size
+                ),
+                React.createElement(
+                  "td",
+                  { style: { textAlign: "center" } },
+                  inUse ? React.createElement(
+                    "span",
+                    { style: { background: "#22c55e", color: "white", padding: "2px 8px", borderRadius: 6, fontSize: 9, fontWeight: 600 } },
+                    "En uso"
+                  ) : React.createElement(
+                    "span",
+                    { style: { background: "#e2e8f0", color: "#64748b", padding: "2px 8px", borderRadius: 6, fontSize: 9 } },
+                    "Disponible"
+                  )
+                ),
+                React.createElement(
+                  "td",
+                  { style: { textAlign: "center", padding: 4 } },
+                  !inUse && React.createElement(
+                    "button",
+                    { onClick: function () {
+                        if (!confirm("¿Eliminar " + p.name + "?")) return;save(Object.assign({}, S, { pTanks: (S.pTanks || []).filter(function (x) {
+                            return x.id !== p.id;
+                          }) }));
+                      }, style: { background: "none", border: "none", color: "#dc2626", cursor: "pointer", fontSize: 13 } },
+                    "✕"
+                  )
                 )
               );
             })

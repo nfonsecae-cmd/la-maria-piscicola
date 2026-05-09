@@ -34,7 +34,7 @@ function dS() {
       return Object.assign({}, f);
     }), inv: FEEDS.map(function (f) {
       return { fid: f.id, stk: 0, prices: [] };
-    }), log: [], pTanks: [{ id: "pt1", name: "Tanque 1", size: "6m" }, { id: "pt2", name: "Tanque 2", size: "6m" }, { id: "pt3", name: "Tanque 3", size: "6m" }, { id: "pt4", name: "Tanque 4", size: "12m" }, { id: "pt5", name: "Tanque 5", size: "12m" }, { id: "pt6", name: "Tanque 6", size: "12m" }] };
+    }), log: [], pTanks: [{ id: "pt1", name: "Tanque 1", size: "6m", diam: 6, h: 0, mwl: 0 }, { id: "pt2", name: "Tanque 2", size: "6m", diam: 6, h: 0, mwl: 0 }, { id: "pt3", name: "Tanque 3", size: "6m", diam: 6, h: 0, mwl: 0 }, { id: "pt4", name: "Tanque 4", size: "12m", diam: 12, h: 0, mwl: 0 }, { id: "pt5", name: "Tanque 5", size: "12m", diam: 12, h: 0, mwl: 0 }, { id: "pt6", name: "Tanque 6", size: "12m", diam: 12, h: 0, mwl: 0 }] };
 }
 
 function wksFor(ew) {
@@ -430,6 +430,18 @@ function App() {
   var _ptSize = useState(""),
       ptSize = _ptSize[0],
       setPtSize = _ptSize[1];
+  var _ptDiam = useState(""),
+      ptDiam = _ptDiam[0],
+      setPtDiam = _ptDiam[1];
+  var _ptH = useState(""),
+      ptH = _ptH[0],
+      setPtH = _ptH[1];
+  var _ptMwl = useState(""),
+      ptMwl = _ptMwl[0],
+      setPtMwl = _ptMwl[1];
+  var _selPt = useState(null),
+      selPt = _selPt[0],
+      setSelPt = _selPt[1];
   var _locked = useState(true),
       locked = _locked[0],
       setLocked = _locked[1];
@@ -2527,119 +2539,546 @@ function App() {
       ),
       tab === "pt" && React.createElement(
         "div",
-        { style: sC },
-        React.createElement(
+        null,
+        !selPt && React.createElement(
           "div",
-          { style: { fontWeight: 700, fontSize: 14, marginBottom: 10, color: "#0c2d48" } },
-          "Tanques Físicos"
-        ),
-        React.createElement(
-          "div",
-          { style: { display: "flex", gap: 6, alignItems: "flex-end", marginBottom: 12, flexWrap: "wrap" } },
+          { style: sC },
           React.createElement(
             "div",
-            { style: { flex: 1, minWidth: 120 } },
-            React.createElement(
-              "label",
-              { style: { fontSize: 9, fontWeight: 600, color: "#64748b" } },
-              "Nombre"
-            ),
-            React.createElement("input", { value: ptName, onChange: function (e) {
-                setPtName(e.target.value);
-              }, placeholder: "Tanque 7", style: Object.assign({}, sI, { textAlign: "left" }) })
+            { style: { fontWeight: 700, fontSize: 14, marginBottom: 10, color: "#0c2d48" } },
+            "Tanques Físicos"
           ),
           React.createElement(
             "div",
-            { style: { width: 80 } },
+            { style: { display: "flex", gap: 6, alignItems: "flex-end", marginBottom: 12, flexWrap: "wrap" } },
             React.createElement(
-              "label",
-              { style: { fontSize: 9, fontWeight: 600, color: "#64748b" } },
-              "Tamaño"
+              "div",
+              { style: { flex: 1, minWidth: 100 } },
+              React.createElement(
+                "label",
+                { style: { fontSize: 9, fontWeight: 600, color: "#64748b" } },
+                "Nombre"
+              ),
+              React.createElement("input", { value: ptName, onChange: function (e) {
+                  setPtName(e.target.value);
+                }, placeholder: "Tanque 7", style: Object.assign({}, sI, { textAlign: "left" }) })
             ),
-            React.createElement("input", { value: ptSize, onChange: function (e) {
-                setPtSize(e.target.value);
-              }, placeholder: "12m", style: sI })
-          ),
-          React.createElement(
-            "button",
-            { onClick: function () {
-                if (!ptName || !ptSize) return;if ((S.pTanks || []).some(function (p) {
-                  return p.name === ptName;
-                })) {
-                  alert("Ya existe un tanque con ese nombre");return;
-                }var pt = { id: uid(), name: ptName, size: ptSize };save(Object.assign({}, S, { pTanks: (S.pTanks || []).concat([pt]) }));setPtName("");setPtSize("");
-              }, style: sB() },
-            "+ Agregar"
-          )
-        ),
-        React.createElement(
-          "table",
-          { style: { width: "100%", borderCollapse: "collapse", fontSize: 11 } },
-          React.createElement(
-            "thead",
-            null,
             React.createElement(
-              "tr",
-              { style: { background: "#0c2d48", color: "white" } },
-              ["Tanque", "Tamaño", "Estado", ""].map(function (h, i) {
-                return React.createElement(
-                  "th",
-                  { key: i, style: { padding: "7px", fontSize: 10, textAlign: "center" } },
-                  h
-                );
-              })
+              "div",
+              { style: { width: 60 } },
+              React.createElement(
+                "label",
+                { style: { fontSize: 9, fontWeight: 600, color: "#64748b" } },
+                "Ø (m)"
+              ),
+              React.createElement("input", { type: "number", step: "0.1", value: ptDiam, onChange: function (e) {
+                  setPtDiam(e.target.value);
+                }, style: sI })
+            ),
+            React.createElement(
+              "div",
+              { style: { width: 60 } },
+              React.createElement(
+                "label",
+                { style: { fontSize: 9, fontWeight: 600, color: "#64748b" } },
+                "Alto (m)"
+              ),
+              React.createElement("input", { type: "number", step: "0.01", value: ptH, onChange: function (e) {
+                  setPtH(e.target.value);
+                }, style: sI })
+            ),
+            React.createElement(
+              "div",
+              { style: { width: 70 } },
+              React.createElement(
+                "label",
+                { style: { fontSize: 9, fontWeight: 600, color: "#64748b" } },
+                "Nivel (m)"
+              ),
+              React.createElement("input", { type: "number", step: "0.01", value: ptMwl, onChange: function (e) {
+                  setPtMwl(e.target.value);
+                }, style: sI })
+            ),
+            React.createElement(
+              "button",
+              { onClick: function () {
+                  if (!ptName || !ptDiam) return;if ((S.pTanks || []).some(function (p) {
+                    return p.name === ptName;
+                  })) {
+                    alert("Ya existe un tanque con ese nombre");return;
+                  }var d = parseFloat(ptDiam) || 0,
+                      h = parseFloat(ptH) || 0,
+                      m = parseFloat(ptMwl) || 0;var pt = { id: uid(), name: ptName, size: d + "m", diam: d, h: h, mwl: m };save(Object.assign({}, S, { pTanks: (S.pTanks || []).concat([pt]) }));setPtName("");setPtDiam("");setPtH("");setPtMwl("");setPtSize("");
+                }, style: sB() },
+              "+ Agregar"
             )
           ),
           React.createElement(
-            "tbody",
-            null,
-            (S.pTanks || []).map(function (p) {
-              var inUse = S.tanks.some(function (t) {
-                return t.on && t.name === p.name;
-              });
-              return React.createElement(
+            "table",
+            { style: { width: "100%", borderCollapse: "collapse", fontSize: 11 } },
+            React.createElement(
+              "thead",
+              null,
+              React.createElement(
                 "tr",
-                { key: p.id, style: { borderBottom: "1px solid #e2e8f0" } },
+                { style: { background: "#0c2d48", color: "white" } },
+                ["Tanque", "Ø", "Alto", "Nivel", "Vol (m³)", "Estado", ""].map(function (h, i) {
+                  return React.createElement(
+                    "th",
+                    { key: i, style: { padding: "7px", fontSize: 9, textAlign: "center" } },
+                    h
+                  );
+                })
+              )
+            ),
+            React.createElement(
+              "tbody",
+              null,
+              (S.pTanks || []).map(function (p) {
+                var inUse = S.tanks.some(function (t) {
+                  return t.on && t.name === p.name;
+                });
+                var vol = p.diam && p.mwl ? Math.PI * Math.pow((p.diam || 0) / 2, 2) * (p.mwl || 0) : 0;
+                return React.createElement(
+                  "tr",
+                  { key: p.id, style: { borderBottom: "1px solid #e2e8f0", cursor: "pointer" }, onClick: function () {
+                      setSelPt(p.id);
+                    } },
+                  React.createElement(
+                    "td",
+                    { style: { padding: 7, fontWeight: 600 } },
+                    p.name
+                  ),
+                  React.createElement(
+                    "td",
+                    { style: { textAlign: "center" } },
+                    (p.diam || "—") + "m"
+                  ),
+                  React.createElement(
+                    "td",
+                    { style: { textAlign: "center" } },
+                    (p.h || "—") + "m"
+                  ),
+                  React.createElement(
+                    "td",
+                    { style: { textAlign: "center" } },
+                    (p.mwl || "—") + "m"
+                  ),
+                  React.createElement(
+                    "td",
+                    { style: { textAlign: "center", fontWeight: 700, fontFamily: "monospace" } },
+                    vol > 0 ? vol.toFixed(1) : "—"
+                  ),
+                  React.createElement(
+                    "td",
+                    { style: { textAlign: "center" } },
+                    inUse ? React.createElement(
+                      "span",
+                      { style: { background: "#22c55e", color: "white", padding: "2px 8px", borderRadius: 6, fontSize: 9, fontWeight: 600 } },
+                      "En uso"
+                    ) : React.createElement(
+                      "span",
+                      { style: { background: "#e2e8f0", color: "#64748b", padding: "2px 8px", borderRadius: 6, fontSize: 9 } },
+                      "Disponible"
+                    )
+                  ),
+                  React.createElement(
+                    "td",
+                    { style: { textAlign: "center", padding: 4 } },
+                    !inUse && React.createElement(
+                      "button",
+                      { onClick: function (e) {
+                          e.stopPropagation();if (!confirm("¿Eliminar " + p.name + "?")) return;save(Object.assign({}, S, { pTanks: (S.pTanks || []).filter(function (x) {
+                              return x.id !== p.id;
+                            }) }));
+                        }, style: { background: "none", border: "none", color: "#dc2626", cursor: "pointer", fontSize: 13 } },
+                      "✕"
+                    )
+                  )
+                );
+              })
+            )
+          )
+        ),
+        selPt && (function () {
+          var pt = (S.pTanks || []).find(function (p) {
+            return p.id === selPt;
+          });
+          if (!pt) return null;
+          var vol = pt.diam && pt.mwl ? Math.PI * Math.pow(pt.diam / 2, 2) * pt.mwl : 0;
+          var cult = S.tanks.find(function (t) {
+            return t.on && t.name === pt.name;
+          });
+          var realW = 0,
+              realAl = 0,
+              realBio = 0;
+          if (cult) {
+            var c = calc(cult),
+                cw = calWeek(cult.sd),
+                idx = cwIdx(cult, cw);
+            var row = c[idx];
+            if (row) {
+              realAl = row.al;
+              var lastBio = null;for (var bi = c.length - 1; bi >= 0; bi--) {
+                if (c[bi].rw != null) {
+                  lastBio = c[bi].rw;break;
+                }
+              }
+              realW = lastBio || row.wf;
+              realBio = realAl * realW / 1000;
+            }
+          }
+          var projAl = realAl;var projBioKg = projAl * PESO_FINAL / 1000;
+          return React.createElement(
+            "div",
+            null,
+            React.createElement(
+              "button",
+              { onClick: function () {
+                  setSelPt(null);
+                }, style: { background: "none", border: "none", color: "#1a4a6e", fontWeight: 600, fontSize: 12, cursor: "pointer", marginBottom: 10 } },
+              "← Tanques"
+            ),
+            React.createElement(
+              "div",
+              { style: Object.assign({}, sC, { marginBottom: 12 }) },
+              React.createElement(
+                "div",
+                { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 } },
                 React.createElement(
-                  "td",
-                  { style: { padding: 7, fontWeight: 600 } },
-                  p.name
+                  "span",
+                  { style: { fontWeight: 700, fontSize: 16, color: "#0c2d48" } },
+                  pt.name
                 ),
+                cult && React.createElement(
+                  "span",
+                  { style: { background: "#22c55e", color: "white", padding: "3px 10px", borderRadius: 6, fontSize: 10, fontWeight: 600 } },
+                  cult.cultivo ? "C" + cult.cultivo + " · " : "",
+                  "S" + calWeek(cult.sd)
+                )
+              ),
+              React.createElement(
+                "div",
+                { style: { fontWeight: 700, fontSize: 12, color: "#64748b", marginBottom: 8 } },
+                "Información General"
+              ),
+              React.createElement(
+                "div",
+                { style: { display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, marginBottom: 6 } },
                 React.createElement(
-                  "td",
-                  { style: { textAlign: "center", fontWeight: 600 } },
-                  p.size
-                ),
-                React.createElement(
-                  "td",
-                  { style: { textAlign: "center" } },
-                  inUse ? React.createElement(
-                    "span",
-                    { style: { background: "#22c55e", color: "white", padding: "2px 8px", borderRadius: 6, fontSize: 9, fontWeight: 600 } },
-                    "En uso"
-                  ) : React.createElement(
-                    "span",
-                    { style: { background: "#e2e8f0", color: "#64748b", padding: "2px 8px", borderRadius: 6, fontSize: 9 } },
-                    "Disponible"
+                  "div",
+                  { style: { textAlign: "center", padding: 8, background: "#f8fafc", borderRadius: 8 } },
+                  React.createElement(
+                    "div",
+                    { style: { fontSize: 9, color: "#94a3b8" } },
+                    "Diámetro (Ø)"
+                  ),
+                  React.createElement(
+                    "div",
+                    { style: { fontSize: 18, fontWeight: 700, color: "#0c2d48" } },
+                    pt.diam || "—",
+                    React.createElement(
+                      "span",
+                      { style: { fontSize: 10 } },
+                      "m"
+                    )
                   )
                 ),
                 React.createElement(
-                  "td",
-                  { style: { textAlign: "center", padding: 4 } },
-                  !inUse && React.createElement(
-                    "button",
-                    { onClick: function () {
-                        if (!confirm("¿Eliminar " + p.name + "?")) return;save(Object.assign({}, S, { pTanks: (S.pTanks || []).filter(function (x) {
-                            return x.id !== p.id;
-                          }) }));
-                      }, style: { background: "none", border: "none", color: "#dc2626", cursor: "pointer", fontSize: 13 } },
-                    "✕"
+                  "div",
+                  { style: { textAlign: "center", padding: 8, background: "#f8fafc", borderRadius: 8 } },
+                  React.createElement(
+                    "div",
+                    { style: { fontSize: 9, color: "#94a3b8" } },
+                    "Altura"
+                  ),
+                  React.createElement(
+                    "div",
+                    { style: { fontSize: 18, fontWeight: 700, color: "#0c2d48" } },
+                    pt.h || "—",
+                    React.createElement(
+                      "span",
+                      { style: { fontSize: 10 } },
+                      "m"
+                    )
+                  )
+                ),
+                React.createElement(
+                  "div",
+                  { style: { textAlign: "center", padding: 8, background: "#f8fafc", borderRadius: 8 } },
+                  React.createElement(
+                    "div",
+                    { style: { fontSize: 9, color: "#94a3b8" } },
+                    "Nivel Máx."
+                  ),
+                  React.createElement(
+                    "div",
+                    { style: { fontSize: 18, fontWeight: 700, color: "#0c2d48" } },
+                    pt.mwl || "—",
+                    React.createElement(
+                      "span",
+                      { style: { fontSize: 10 } },
+                      "m"
+                    )
+                  )
+                ),
+                React.createElement(
+                  "div",
+                  { style: { textAlign: "center", padding: 8, background: "#eff6ff", borderRadius: 8, border: "1px solid #93c5fd" } },
+                  React.createElement(
+                    "div",
+                    { style: { fontSize: 9, color: "#3b82f6", fontWeight: 600 } },
+                    "Volumen"
+                  ),
+                  React.createElement(
+                    "div",
+                    { style: { fontSize: 18, fontWeight: 700, color: "#1e40af" } },
+                    vol > 0 ? vol.toFixed(1) : "—",
+                    React.createElement(
+                      "span",
+                      { style: { fontSize: 10 } },
+                      "m³"
+                    )
                   )
                 )
-              );
-            })
-          )
-        )
+              ),
+              React.createElement(
+                "div",
+                { style: { display: "flex", gap: 6, alignItems: "flex-end", marginTop: 8 } },
+                React.createElement(
+                  "div",
+                  { style: { width: 60 } },
+                  React.createElement(
+                    "label",
+                    { style: { fontSize: 8, color: "#64748b" } },
+                    "Ø (m)"
+                  ),
+                  React.createElement("input", { type: "number", step: "0.1", value: pt.diam || "", onChange: function (e) {
+                      var v = parseFloat(e.target.value) || 0;save(Object.assign({}, S, { pTanks: (S.pTanks || []).map(function (p) {
+                          return p.id === pt.id ? Object.assign({}, p, { diam: v, size: v + "m" }) : p;
+                        }) }));
+                    }, style: Object.assign({}, sI, { fontSize: 11 }) })
+                ),
+                React.createElement(
+                  "div",
+                  { style: { width: 60 } },
+                  React.createElement(
+                    "label",
+                    { style: { fontSize: 8, color: "#64748b" } },
+                    "Alto (m)"
+                  ),
+                  React.createElement("input", { type: "number", step: "0.01", value: pt.h || "", onChange: function (e) {
+                      save(Object.assign({}, S, { pTanks: (S.pTanks || []).map(function (p) {
+                          return p.id === pt.id ? Object.assign({}, p, { h: parseFloat(e.target.value) || 0 }) : p;
+                        }) }));
+                    }, style: Object.assign({}, sI, { fontSize: 11 }) })
+                ),
+                React.createElement(
+                  "div",
+                  { style: { width: 70 } },
+                  React.createElement(
+                    "label",
+                    { style: { fontSize: 8, color: "#64748b" } },
+                    "Nivel (m)"
+                  ),
+                  React.createElement("input", { type: "number", step: "0.01", value: pt.mwl || "", onChange: function (e) {
+                      save(Object.assign({}, S, { pTanks: (S.pTanks || []).map(function (p) {
+                          return p.id === pt.id ? Object.assign({}, p, { mwl: parseFloat(e.target.value) || 0 }) : p;
+                        }) }));
+                    }, style: Object.assign({}, sI, { fontSize: 11 }) })
+                )
+              )
+            ),
+            cult && vol > 0 && React.createElement(
+              "div",
+              { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } },
+              React.createElement(
+                "div",
+                { style: Object.assign({}, sC, { borderTop: "4px solid #22c55e" }) },
+                React.createElement(
+                  "div",
+                  { style: { fontWeight: 700, fontSize: 12, color: "#22c55e", marginBottom: 10 } },
+                  "Carga Real"
+                ),
+                React.createElement(
+                  "div",
+                  { style: { display: "flex", flexDirection: "column", gap: 8 } },
+                  React.createElement(
+                    "div",
+                    { style: { display: "flex", justifyContent: "space-between" } },
+                    React.createElement(
+                      "span",
+                      { style: { fontSize: 11, color: "#64748b" } },
+                      "Peso actual"
+                    ),
+                    React.createElement(
+                      "span",
+                      { style: { fontWeight: 700, fontFamily: "monospace" } },
+                      realW.toFixed(1) + "g"
+                    )
+                  ),
+                  React.createElement(
+                    "div",
+                    { style: { display: "flex", justifyContent: "space-between" } },
+                    React.createElement(
+                      "span",
+                      { style: { fontSize: 11, color: "#64748b" } },
+                      "Población"
+                    ),
+                    React.createElement(
+                      "span",
+                      { style: { fontWeight: 700, fontFamily: "monospace" } },
+                      fN(realAl)
+                    )
+                  ),
+                  React.createElement(
+                    "div",
+                    { style: { display: "flex", justifyContent: "space-between" } },
+                    React.createElement(
+                      "span",
+                      { style: { fontSize: 11, color: "#64748b" } },
+                      "Biomasa"
+                    ),
+                    React.createElement(
+                      "span",
+                      { style: { fontWeight: 700, fontFamily: "monospace" } },
+                      fN(Math.round(realBio)) + " kg"
+                    )
+                  ),
+                  React.createElement(
+                    "div",
+                    { style: { display: "flex", justifyContent: "space-between", borderTop: "1px solid #e2e8f0", paddingTop: 6 } },
+                    React.createElement(
+                      "span",
+                      { style: { fontSize: 11, color: "#64748b" } },
+                      "Peces/m³"
+                    ),
+                    React.createElement(
+                      "span",
+                      { style: { fontWeight: 700, fontFamily: "monospace", color: "#0c2d48" } },
+                      fN(Math.round(realAl / vol))
+                    )
+                  ),
+                  React.createElement(
+                    "div",
+                    { style: { display: "flex", justifyContent: "space-between" } },
+                    React.createElement(
+                      "span",
+                      { style: { fontSize: 11, color: "#64748b", fontWeight: 600 } },
+                      "Carga kg/m³"
+                    ),
+                    React.createElement(
+                      "span",
+                      { style: { fontWeight: 700, fontSize: 16, fontFamily: "monospace", color: "#22c55e" } },
+                      (realBio / vol).toFixed(1)
+                    )
+                  )
+                )
+              ),
+              React.createElement(
+                "div",
+                { style: Object.assign({}, sC, { borderTop: "4px solid #3b82f6" }) },
+                React.createElement(
+                  "div",
+                  { style: { fontWeight: 700, fontSize: 12, color: "#3b82f6", marginBottom: 10 } },
+                  "Carga Proyectada (" + PESO_FINAL + "g)"
+                ),
+                React.createElement(
+                  "div",
+                  { style: { display: "flex", flexDirection: "column", gap: 8 } },
+                  React.createElement(
+                    "div",
+                    { style: { display: "flex", justifyContent: "space-between" } },
+                    React.createElement(
+                      "span",
+                      { style: { fontSize: 11, color: "#64748b" } },
+                      "Peso final"
+                    ),
+                    React.createElement(
+                      "span",
+                      { style: { fontWeight: 700, fontFamily: "monospace" } },
+                      PESO_FINAL + "g"
+                    )
+                  ),
+                  React.createElement(
+                    "div",
+                    { style: { display: "flex", justifyContent: "space-between" } },
+                    React.createElement(
+                      "span",
+                      { style: { fontSize: 11, color: "#64748b" } },
+                      "Población"
+                    ),
+                    React.createElement(
+                      "span",
+                      { style: { fontWeight: 700, fontFamily: "monospace" } },
+                      fN(projAl)
+                    )
+                  ),
+                  React.createElement(
+                    "div",
+                    { style: { display: "flex", justifyContent: "space-between" } },
+                    React.createElement(
+                      "span",
+                      { style: { fontSize: 11, color: "#64748b" } },
+                      "Biomasa"
+                    ),
+                    React.createElement(
+                      "span",
+                      { style: { fontWeight: 700, fontFamily: "monospace" } },
+                      fN(Math.round(projBioKg)) + " kg"
+                    )
+                  ),
+                  React.createElement(
+                    "div",
+                    { style: { display: "flex", justifyContent: "space-between", borderTop: "1px solid #e2e8f0", paddingTop: 6 } },
+                    React.createElement(
+                      "span",
+                      { style: { fontSize: 11, color: "#64748b" } },
+                      "Peces/m³"
+                    ),
+                    React.createElement(
+                      "span",
+                      { style: { fontWeight: 700, fontFamily: "monospace", color: "#0c2d48" } },
+                      fN(Math.round(projAl / vol))
+                    )
+                  ),
+                  React.createElement(
+                    "div",
+                    { style: { display: "flex", justifyContent: "space-between" } },
+                    React.createElement(
+                      "span",
+                      { style: { fontSize: 11, color: "#64748b", fontWeight: 600 } },
+                      "Carga kg/m³"
+                    ),
+                    React.createElement(
+                      "span",
+                      { style: { fontWeight: 700, fontSize: 16, fontFamily: "monospace", color: "#3b82f6" } },
+                      (projBioKg / vol).toFixed(1)
+                    )
+                  )
+                )
+              )
+            ),
+            cult && !vol && React.createElement(
+              "div",
+              { style: Object.assign({}, sC, { background: "#fef9c3", borderColor: "#f59e0b" }) },
+              React.createElement(
+                "div",
+                { style: { fontSize: 11, color: "#92400e", fontWeight: 600 } },
+                "⚠️ Complete las dimensiones del tanque (Ø, altura, nivel) para ver los KPIs de carga."
+              )
+            ),
+            !cult && React.createElement(
+              "div",
+              { style: Object.assign({}, sC, { background: "#f1f5f9" }) },
+              React.createElement(
+                "div",
+                { style: { fontSize: 11, color: "#64748b", textAlign: "center" } },
+                "No hay cultivo activo en este tanque."
+              )
+            )
+          );
+        })()
       ),
       React.createElement(
         "div",
